@@ -1,0 +1,363 @@
+---
+title: "Data Analysis Case Study"
+author: "Nikita Tewary"
+date: "02/01/2022"
+output: html_document
+---
+## Topic- How can a Wellness Compan Play it Smart?
+
+### Business Task:
+This is the capstone project for the Google Data Analytics Certification.For this case study, I am tasked with assisting a wearable fitness technology company, Bellabeat, improve their marketing strategies for their products by investigating customer activity with other fitness trackers like FitBit.
+
+My goal is to look at datasets to find out:
+
+* How are customers using other fitness trackers, in their daily life?
+
+* What particular features seem to be the most heavily used?
+
+* What features do Bellabeat products already have that consumers want, and how do we focus marketing on those aspects?
+
+### Load the packages
+
+I will be using tidyverse package as well as the skimr, here, and janitor packages for help with this project.
+
+We’re also using the sqldf package, which will allow us to emulate SQL syntax when looking at data
+```{r load_packages, warning=FALSE}
+install.packages("sqldf",repos = "http://cran.us.r-project.org")
+library(sqldf)
+library(tidyverse)
+library(skimr)
+library(janitor)
+```
+### Upload the dataset
+The data that is provided is [FitBit Fitness Tracker Data](https://www.kaggle.com/arashnic/fitbit).
+This dataset has 18 different csv files that range from Daily activity, calories, steps; hourly calories, intensities, and steps; and heart rate, sleep data and weight logs.
+After looking at the types of data collected by these 30 fitbit users, i discovered:
+* No water intake data has been collected
+
+* These data may not actually assist me, but that will come with exploration.
+
+### Load the CSV files
+The data frames I’ll be working with in this case study will be creating objects for:
+
+* daily_activity
+
+* daily calories
+
+* daily sleep
+
+* weight log info
+
+* daily intensities
+
+```{r}
+daily_activity <- read.csv("C:/Users/Asus/OneDrive/Documents/fitbit_base/Fitabase_Data/dailyActivity_merged.csv")
+daily_calories <- read.csv("C:/Users/Asus/OneDrive/Documents/fitbit_base/Fitabase_Data/dailyCalories_merged.csv")
+sleep_day <- read.csv("C:/Users/Asus/OneDrive/Documents/fitbit_base/Fitabase_Data/sleepDay_merged.csv")
+daily_intensities <- read.csv("C:/Users/Asus/OneDrive/Documents/fitbit_base/Fitabase_Data/dailyIntensities_merged.csv")
+weight_log <- read.csv("C:/Users/Asus/OneDrive/Documents/fitbit_base/Fitabase_Data/weightLogInfo_merged.csv")
+```
+
+### Explore the Tables
+
+#### daily_activity
+```{r}
+head(daily_activity)
+```
+```{r}
+colnames(daily_activity)
+```
+```{r}
+glimpse(daily_activity)
+```
+#### daily_calories
+```{r}
+head(daily_calories)
+```
+```{r}
+colnames(daily_calories)
+```
+```{r}
+glimpse(daily_calories)
+```
+
+#### sleep_day
+```{r}
+head(sleep_day)
+```
+```{r}
+colnames(sleep_day)
+```
+```{r}
+glimpse(sleep_day)
+```
+
+#### daily_intensities
+```{r}
+head(daily_intensities)
+```
+```{r}
+colnames(daily_intensities)
+```
+```{r}
+glimpse(daily_intensities)
+```
+#### weight_log
+```{r}
+head(weight_log)
+```
+```{r}
+colnames(weight_log)
+```
+```{r}
+glimpse(weight_log)
+```
+
+### My inference 
+After exploring these tables i observed a few things:
+
+* Merging of the data frames is possible because they all have same 'ID' fields
+
+* the daily_activity, daily_calories, and daily_intensities have the exact (940) number of observations.
+
+* Lastly the daily_activity table might have a log of calories and intensities already, so we should confirm that the values actually match for any given ‘ID’ number.
+
+To confirm the last point I am running the following codes:
+```{r}
+daily_activity2 <- daily_activity %>%
+  select(Id, ActivityDate, Calories)
+
+head(daily_activity2)
+```
+```{r}
+sql_check1 <- sqldf('SELECT * FROM daily_activity2 INTERSECT SELECT * FROM daily_calories')
+head(sql_check1)
+```
+```{r}
+nrow(sql_check1)
+```
+From the above codes we can say that since the first six values of daily_activity and daily_calories are same and total observation of the sql query is 940 the values are the same between the dataframes.
+
+My gut says, daily_intensities and daily_activities will also intersect but I would not create bias and will confirm it.
+
+```{r}
+daily_activity3 <- daily_activity %>%
+  select(Id, ActivityDate, SedentaryMinutes, LightlyActiveMinutes, FairlyActiveMinutes, VeryActiveMinutes, SedentaryActiveDistance, LightActiveDistance, ModeratelyActiveDistance, VeryActiveDistance)
+
+head(daily_activity3)
+```
+
+```{r}
+sql_check2 <- sqldf('SELECT * FROM daily_activity3 INTERSECT SELECT * FROM daily_intensities')
+head(sql_check2)
+```
+```{r}
+nrow(sql_check2)
+```
+Seems like my gut was correct! but its always better to check, see and confirm with the data.
+
+This means I can carry out my analysis with just the 3 different data frames:
+* daily_activity
+* sleep_day
+* weight_log
+
+Since I have done my preparation and pre-processing. Now I will do the analysis
+
+### The Analysis
+Since the number of observation in daily_activity is a lot more tha weight_log and sleep_day dataframes. There are chances there might be more id's in the daily_activity dataframe. Lets confirm this.
+```{r}
+n_distinct(daily_activity$Id)
+```
+```{r}
+n_distinct(sleep_day$Id)
+```
+```{r}
+n_distinct(weight_log$Id)
+```
+Lets check once again the total number of observations in each dataframe
+```{r}
+nrow(daily_activity)
+```
+```{r}
+nrow(sleep_day)
+```
+```{r}
+nrow(weight_log)
+```
+Quick summary of all the dataframes:
+* daily_activity
+```{r}
+daily_activity %>%  
+  select(TotalSteps,
+         TotalDistance,
+         SedentaryMinutes,
+         VeryActiveMinutes) %>%
+  summary()
+```
+* sleep_day
+```{r}
+sleep_day %>%  
+  select(TotalSleepRecords,
+  TotalMinutesAsleep,
+  TotalTimeInBed) %>%
+  summary()
+```
+* weight dataframe
+```{r}
+weight_log %>%  
+  select(WeightPounds,
+  BMI) %>%
+  summary()
+```
+
+### Plotting the explorations
+Just by seeing the heads and a quick summary one can't see the full trend of the dataframes. So I will plot some graphs to see the relationship properly.
+
+I would like to start with the relationship between steps taken in a da and sedentary(people were inactive) minutes
+```{r}
+ggplot(data=daily_activity, aes(x=TotalSteps, y=SedentaryMinutes, color = Calories)) + geom_point()
+```
+We can see there is a negative relation between total steps and sedentary minutes which is true also because one doesn't move when he/she is inactive!
+
+### Strategy-2
+So we can easily market this to consumers by telling them smart-devices could help them start their journey by measuring how much they’re already moving! 
+
+The can also know about their sedentary time.
+
+One can note that sedentary time is not necessarily related to calories burned.
+
+Now I will plot the graph between calories and total steps to see the relationship between them.
+
+```{r}
+ggplot(data=daily_activity, aes(x=TotalSteps, y = Calories))+ geom_point() + stat_smooth(method=lm)
+```
+
+We can clearly see people who took the most total steps tend to burn the most calories. But there is a lot of spread in the value.
+
+Now lets look at the residual or the difference between the observed values and the estimated value
+
+```{r}
+calories.lm <- lm(Calories ~ TotalSteps, data = daily_activity)
+calories.res <- resid(calories.lm)
+
+plot(daily_activity$TotalSteps, calories.res, ylab="Residuals",
+     xlab = "Total Steps", main = "Calories Burned")
+abline(0,0)
+
+```
+```{r}
+#plot the density of the residuals
+plot(density(calories.res))
+```
+```{r}
+#Checking for normality 
+qqnorm(calories.res)
+qqline(calories.res)
+```
+
+So it looks like the spread isn’t as far statistically as we thought.
+
+### Strategy-3 
+By seeing linear relationship in the graphs we can market that in order to burn calories we do not need to do high-intensity work out, one just needs to walk.
+
+#### Relation between sleep and time in bed
+```{r}
+ggplot(data=sleep_day, aes(x=TotalMinutesAsleep, y=TotalTimeInBed)) + geom_point()
+```
+
+As we can see, there are some outliers, some people that spent a lot of time in bed, but didn’t actually sleep, and then a small batch that slept a whole bunch and spent time in bed 
+
+### Strategy-4
+We could definitely market to consumers to monitor their time in bed against their sleep time.
+
+Since sleep time can be related to sedentary minutes I can merge these two data sets by the ID field to analyse further.
+
+### Merge the datasets
+
+```{r}
+combined_sleep_day_data <- merge(sleep_day, daily_activity, by="Id")
+head(combined_sleep_day_data)
+```
+Lets once again check the unique ID for the merged dataset.
+```{r}
+n_distinct(combined_sleep_day_data$Id)
+```
+Since we had only 24 unique ID for sleep_day dataset we only have those in the combined one because it did inner join.
+
+To see the all the unique IDs from daily_activity dataset, i will use outer join.
+
+```{r}
+combined_sleep_day_data2 <- merge(sleep_day, daily_activity, by="Id", all = TRUE)
+head(combined_sleep_day_data2)
+```
+```{r}
+n_distinct(combined_sleep_day_data2$Id)
+```
+Now we have all the 33 unique IDs
+
+#### Lets check Sedentary Time vs Time in Bed
+
+For this first plot we’ll try it out with only the 24 unique IDs that have actually logged sleep data.
+
+Let’s run a correlation to see what the correlation coefficient coefficient would be for a linear regression:
+
+```{r}
+sedentary.lm <- lm(SedentaryMinutes ~ TotalTimeInBed, data = combined_sleep_day_data)
+sedentary.lm
+```
+
+By seeing this i can say they are not highly related as time in bed goes up, sedentary minutes actually go down, but not to a significant value since it is approx -0.3.
+
+Lets check correlation between veryactiveminutes and calories
+
+```{r}
+veryactive.lm <- lm(Calories ~ VeryActiveMinutes, data = combined_sleep_day_data)
+veryactive.lm
+```
+
+One can see they are highly co related, so lets plot a graph.
+
+```{r}
+ggplot(data = combined_sleep_day_data, aes(x=VeryActiveMinutes, y=Calories)) + geom_point() + stat_smooth(method = lm)
+
+```
+
+Lets check correlation between total steps taken and calories
+
+```{r}
+ggplot(data = combined_sleep_day_data, aes(x=TotalSteps, y=Calories)) + geom_point() +stat_smooth(method = lm)
+```
+
+```{r}
+lm(Calories ~ TotalSteps, data = combined_sleep_day_data)
+```
+
+The value shows there is a very small correlation between total steps taken and calories burnt.
+
+Lets check correlation between fairlyactivemiutes taken and calories.
+
+```{r}
+lm(Calories ~ FairlyActiveMinutes, data = combined_sleep_day_data)
+```
+
+```{r}
+ggplot(data = combined_sleep_day_data, aes(x=FairlyActiveMinutes, y=Calories)) + geom_point() + stat_smooth(method = lm)
+```
+
+We can see there is a Moderate relationship for fairly active minutes.
+
+## Conclusion
+I prepossessed, explored, analysed and visualized the fitbit users dataset quite deeply, and gave some marketing strategy above.
+
+### What makes Bellabeat stand-out?
+since in the scenario of the case study provided to me it was written Bellabeat collects hydration data because they had one product related to hydration check, they are better because fitbit did not have hydration data.
+
+### Some importand analysis that Bellabeat can use:
+We can see that more people log their calories, steps taken, etc, and fewer users log their sleep data, and only a select few are logging their weight.
+
+### Final marketing strategy:
+To market this, I initially thought that simply being active and taking steps would help with people on their journey start to burn calories. While this may be true, but the correlation between the two was small so after seeing the correlation maybe we shouldn’t market it that way.
+
+I would focus on the fact that simply collecting more data from different competitors one could see more trends.
+
+Also the best relationship was in between veryactiveminutes and calories so the people who are very active tend to burn the most calorie this can be a good marketing strategy.
